@@ -43,7 +43,7 @@ pub fn packable(
         }
     };
 
-    let stream = quote! {
+    quote! {
         #input
         impl #impl_generics ::bitpacker::Packable<#buffer_type> for #ident #ty_generics #where_clause {
             const SIZE: u32 = #size;
@@ -56,11 +56,7 @@ pub fn packable(
                 #unpack
             }
         }
-    };
-    if cfg!(debug_assertions) {
-        eprintln!("{}", stream);
-    }
-    stream.into()
+    }.into()
 }
 
 fn data_struct(data: &DataStruct, buffer_type: &Type) -> (TokenStream, TokenStream, TokenStream) {
