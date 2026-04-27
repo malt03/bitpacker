@@ -1,10 +1,12 @@
-use std::ops::{BitAnd, BitOr, Shl, Shr};
+use std::ops::{BitAnd, BitOr, Not, Shl, Shr};
 
 pub trait Buffer:
     Shl<u32, Output = Self>
     + Shr<u32, Output = Self>
     + BitOr<Output = Self>
     + BitAnd<Output = Self>
+    + Not<Output = Self>
+    + Eq
     + Copy
 {
     const ZERO: Self;

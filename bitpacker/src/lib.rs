@@ -1,6 +1,7 @@
 mod buffer;
 mod packable;
 mod packer;
+mod shared;
 mod unpacker;
 
 pub use bitpacker_derive::packable;

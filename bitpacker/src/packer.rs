@@ -1,4 +1,4 @@
-use crate::{Buffer, Packable};
+use crate::{Buffer, Packable, shared::mask};
 
 #[derive(Debug)]
 pub struct Packer<B> {
@@ -18,11 +18,15 @@ impl<B: Buffer> Packer<B> {
 
     #[inline]
     pub fn raw_pack(&mut self, packed: B, size: u32) {
-        debug_assert!(size <= B::BITS);
         if size == 0 {
             return;
         }
-        self.buffer = packed | (self.buffer << size);
+        let mask = mask::<B>(size);
+        debug_assert!(
+            packed & !mask == B::ZERO,
+            "Packed value exceeds the size limit"
+        );
+        self.buffer = (packed & mask) | (self.buffer << size);
     }
 
     #[inline]

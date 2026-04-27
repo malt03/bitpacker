@@ -1,4 +1,4 @@
-use crate::{Buffer, Packable};
+use crate::{Buffer, Packable, shared::mask};
 
 #[derive(Debug)]
 pub struct Unpacker<B> {
@@ -18,12 +18,10 @@ impl<B: Buffer> Unpacker<B> {
 
     #[inline]
     pub fn raw_unpack(&mut self, size: u32) -> B {
-        debug_assert!(size <= B::BITS);
         if size == 0 {
             return B::ZERO;
         }
-        let mask = B::MAX >> (B::BITS - size);
-        let packed = self.buffer & mask;
+        let packed = self.buffer & mask::<B>(size);
         self.buffer = self.buffer >> size;
         packed
     }
