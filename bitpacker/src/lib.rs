@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 mod buffer;
+mod extensions;
 mod packable;
 mod packer;
 mod shared;

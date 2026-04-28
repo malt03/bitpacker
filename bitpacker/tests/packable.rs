@@ -57,10 +57,7 @@ fn enum_mixed_variants() {
 #[test]
 fn generic_struct() {
     assert_eq!(GenericPair::<U3>::SIZE, 6);
-    assert_round_trip(GenericPair {
-        x: U3(1),
-        y: U3(2),
-    });
+    assert_round_trip(GenericPair { x: U3(1), y: U3(2) });
 }
 
 #[test]
@@ -95,4 +92,33 @@ fn buffer_boundary_u128() {
         hi: U64v(0xDEAD_BEEF_CAFE_BABE),
         lo: U64v(0x0123_4567_89AB_CDEF),
     });
+}
+
+#[test]
+fn option() {
+    assert_eq!(Option::<U3>::SIZE, 4);
+    assert_round_trip(Some(U3(5)));
+    assert_round_trip(None::<U3>);
+}
+
+#[test]
+fn boolean() {
+    assert_eq!(<bool as Packable<u128>>::SIZE, 1);
+    assert_round_trip::<_, u128>(true);
+    assert_round_trip::<_, u128>(false);
+}
+
+#[test]
+fn tuple() {
+    assert_eq!(<(U3, U3, U3) as Packable<u128>>::SIZE, 9);
+    assert_round_trip((U3(1),));
+    assert_round_trip((U3(1), U3(2)));
+    assert_round_trip((U3(1), U3(2), U3(3)));
+    assert_round_trip((U3(7), U3(0), U3(5), U3(3), U3(1)));
+}
+
+#[test]
+fn array() {
+    assert_eq!(<[U3; 4] as Packable<u128>>::SIZE, 12);
+    assert_round_trip([U3(1), U3(2), U3(3), U3(4)]);
 }

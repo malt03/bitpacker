@@ -73,7 +73,7 @@ assert_eq!(Move::unpack(packed), m);
 
 Each move serializes to 2 bytes. A naive byte-aligned encoding of the same data would take 4 bytes or more.
 
-## Supported shapes
+## Supported types
 
 `#[packable(B)]` can derive `Packable<B>` for:
 
@@ -86,6 +86,15 @@ Each move serializes to 2 bytes. A naive byte-aligned encoding of the same data 
   - Tuple variants (`Bar(X, Y)`)
   - Named variants (`Bar { x: X, y: Y }`)
 - **Generic types** — `Packable<B>` bounds are auto-applied to type parameters
+
+Built-in `Packable` implementations are provided for:
+
+| Type | `SIZE` |
+|---|---|
+| `bool` | `1` |
+| `Option<T>` | `1 + T::SIZE` |
+| `(T1, T2, ..., Tn)` (up to 12-tuples) | `T1::SIZE + T2::SIZE + ... + Tn::SIZE` |
+| `[T; N]` | `N * T::SIZE` |
 
 For primitive types or custom encodings (like `Coord` above), implement `Packable<B>` manually.
 
