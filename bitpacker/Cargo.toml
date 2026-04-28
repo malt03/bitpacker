@@ -1,7 +1,15 @@
 [package]
 name = "bitpacker"
-version = "0.1.0"
-edition = "2024"
+description = "A small, derive-based bit packing library for compact integer representations"
+readme = "README.md"
+keywords = ["bit-packing", "encoding", "derive", "compact", "bitfield"]
+categories = ["encoding", "data-structures"]
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
-bitpacker_derive = { path = "../bitpacker_derive" }
+bitpacker_derive = { path = "../bitpacker_derive", version = "=0.1.0" }

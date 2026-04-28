@@ -5,6 +5,35 @@ use syn::{
     parse_macro_input, parse_quote,
 };
 
+/// Derives `bitpacker::Packable<B>` for a struct or enum.
+///
+/// The buffer type is supplied as the macro argument:
+///
+/// ```ignore
+/// #[packable(u32)]
+/// struct Foo { x: X, y: Y }
+/// ```
+///
+/// All field types must implement `Packable<B>` for the same buffer type `B`.
+///
+/// # Layout
+///
+/// Fields are packed in declaration order. The first field occupies the
+/// highest bits and the last field occupies the lowest bits.
+///
+/// For enums, a `ceil(log2(N))`-bit variant index is packed in the lowest
+/// bits (or 0 bits if `N == 1`), followed by the variant payload in the
+/// higher bits. The size is `variant_index_size + max(variant_payload_sizes)`.
+///
+/// # Generics
+///
+/// Type parameters automatically receive a `Packable<B>` bound.
+///
+/// # Empty enums
+///
+/// Enums with no variants are silently skipped — no `Packable` impl is
+/// generated. This makes the macro non-disruptive during incremental
+/// development.
 #[proc_macro_attribute]
 pub fn packable(
     args: proc_macro::TokenStream,

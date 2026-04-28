@@ -1,0 +1,20 @@
+[package]
+name = "bitpacker_bench"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+bitpacker = { path = "../bitpacker" }
+
+[dev-dependencies]
+criterion = "0.8"
+modular-bitfield = "0.13"
+bitfield-struct = "0.13"
+bincode = "2"
+postcard = { version = "1", features = ["alloc"] }
+serde = { version = "1", features = ["derive"] }
+
+[[bench]]
+name = "compare"
+harness = false

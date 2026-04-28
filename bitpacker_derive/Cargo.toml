@@ -1,7 +1,12 @@
 [package]
 name = "bitpacker_derive"
-version = "0.1.0"
-edition = "2024"
+description = "Derive macro for the bitpacker crate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [lib]
 proc-macro = true
