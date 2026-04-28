@@ -1,5 +1,9 @@
 # bitcram
 
+[![Crates.io Version](https://img.shields.io/crates/v/bitcram)](https://crates.io/crates/bitcram)
+[![docs.rs](https://img.shields.io/docsrs/bitcram)](https://docs.rs/bitcram)
+[![Test](https://github.com/malt03/bitcram/actions/workflows/test.yml/badge.svg?event=release)](https://github.com/malt03/bitcram/actions/workflows/test.yml)
+
 A small, derive-based bit packing library for Rust. Pack structured data into compact integer buffers with sub-byte field granularity.
 
 ## Features
