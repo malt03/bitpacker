@@ -1,6 +1,6 @@
 [package]
-name = "bitpacker_derive"
-description = "Derive macro for the bitpacker crate"
+name = "bitcram_derive"
+description = "Derive macro for the bitcram crate"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

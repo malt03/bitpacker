@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use bitpacker::{Packable, packable};
+use bitcram::{Packable, packable};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct U3(pub u8);

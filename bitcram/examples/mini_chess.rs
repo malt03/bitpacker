@@ -1,4 +1,4 @@
-use bitpacker::{Packable, packable};
+use bitcram::{Packable, packable};
 
 #[derive(Debug, PartialEq, Eq)]
 struct Coord {

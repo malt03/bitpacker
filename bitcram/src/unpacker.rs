@@ -12,7 +12,7 @@ use crate::{Buffer, Packable, shared::mask};
 /// # Example
 ///
 /// ```
-/// use bitpacker::Unpacker;
+/// use bitcram::Unpacker;
 ///
 /// let mut unpacker = Unpacker::<u32>::new(0b1011);
 /// assert_eq!(unpacker.raw_unpack(1), 0b1);

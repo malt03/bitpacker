@@ -5,7 +5,7 @@ use syn::{
     parse_macro_input, parse_quote,
 };
 
-/// Derives `bitpacker::Packable<B>` for a struct or enum.
+/// Derives `bitcram::Packable<B>` for a struct or enum.
 ///
 /// The buffer type is supplied as the macro argument:
 ///
@@ -49,7 +49,7 @@ pub fn packable(
         let ident = &type_param.ident;
         where_clause
             .predicates
-            .push(parse_quote! { #ident: ::bitpacker::Packable<#buffer_type> });
+            .push(parse_quote! { #ident: ::bitcram::Packable<#buffer_type> });
     }
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
@@ -64,7 +64,7 @@ pub fn packable(
         Data::Union(_) => {
             return syn::Error::new_spanned(
                 input,
-                "Bitpacker can only be derived for structs and enums",
+                "Bitcram can only be derived for structs and enums",
             )
             .to_compile_error()
             .into();
@@ -73,7 +73,7 @@ pub fn packable(
 
     quote! {
         #input
-        impl #impl_generics ::bitpacker::Packable<#buffer_type> for #ident #ty_generics #where_clause {
+        impl #impl_generics ::bitcram::Packable<#buffer_type> for #ident #ty_generics #where_clause {
             const SIZE: u32 = #size;
             #[inline]
             fn pack(&self) -> #buffer_type {
@@ -98,7 +98,7 @@ fn data_struct(data: &DataStruct, buffer_type: &Type) -> (TokenStream, TokenStre
         Fields::Unnamed(fields) => fields_unnamed(buffer_type, fields),
         Fields::Unit => {
             return (
-                quote! { <#buffer_type as ::bitpacker::Buffer>::ZERO },
+                quote! { <#buffer_type as ::bitcram::Buffer>::ZERO },
                 quote! { Self },
                 quote! { 0 },
             );
@@ -107,13 +107,13 @@ fn data_struct(data: &DataStruct, buffer_type: &Type) -> (TokenStream, TokenStre
 
     (
         quote! {
-            let mut packer = ::bitpacker::Packer::<#buffer_type>::new();
+            let mut packer = ::bitcram::Packer::<#buffer_type>::new();
             let Self #bracketed_idents = self;
             #pack
             packer.into_inner()
         },
         quote! {
-            let mut unpacker = ::bitpacker::Unpacker::<#buffer_type>::new(buffer);
+            let mut unpacker = ::bitcram::Unpacker::<#buffer_type>::new(buffer);
             #unpack
             Self #bracketed_idents
         },
@@ -171,14 +171,14 @@ fn data_enum(
     }
 
     let pack = quote! {
-        let mut packer = ::bitpacker::Packer::<#buffer_type>::new();
+        let mut packer = ::bitcram::Packer::<#buffer_type>::new();
         match self {
             #(#pack_variants)*
         }
         packer.into_inner()
     };
     let unpack = quote! {
-        let mut unpacker = ::bitpacker::Unpacker::<#buffer_type>::new(buffer);
+        let mut unpacker = ::bitcram::Unpacker::<#buffer_type>::new(buffer);
         let variant_index = unpacker.raw_unpack(#variant_size) as u32;
         match variant_index {
             #(#unpack_variants)*
@@ -218,7 +218,7 @@ fn fields_named(buffer_type: &Type, fields: &FieldsNamed) -> FieldsInfo {
         let ty = &field.ty;
         unpacks.push(quote! { let #ident: #ty = unpacker.unpack(); });
         sizes.push(quote! {
-            <#ty as ::bitpacker::Packable<#buffer_type>>::SIZE
+            <#ty as ::bitcram::Packable<#buffer_type>>::SIZE
         });
     }
     let unpacks = unpacks.into_iter().rev();
@@ -242,7 +242,7 @@ fn fields_unnamed(buffer_type: &Type, fields: &FieldsUnnamed) -> FieldsInfo {
         let ty = &field.ty;
         unpacks.push(quote! { let #ident: #ty = unpacker.unpack(); });
         sizes.push(quote! {
-            <#ty as ::bitpacker::Packable<#buffer_type>>::SIZE
+            <#ty as ::bitcram::Packable<#buffer_type>>::SIZE
         });
     }
     let unpacks = unpacks.into_iter().rev();

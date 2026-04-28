@@ -1,11 +1,11 @@
 [package]
-name = "bitpacker_bench"
+name = "bitcram_bench"
 version = "0.1.0"
 edition = "2024"
 publish = false
 
 [dependencies]
-bitpacker = { path = "../bitpacker" }
+bitcram = { path = "../bitcram" }
 
 [dev-dependencies]
 criterion = "0.8"

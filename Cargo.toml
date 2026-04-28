@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["bitpacker", "bitpacker_bench", "bitpacker_derive"]
+members = ["bitcram", "bitcram_bench", "bitcram_derive"]
 
 [workspace.package]
 version = "0.1.0"
@@ -8,4 +8,4 @@ edition = "2024"
 rust-version = "1.85"
 authors = ["Koji Murata <k@malt03.com>"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/malt03/bitpacker"
+repository = "https://github.com/malt03/bitcram"

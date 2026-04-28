@@ -1,5 +1,5 @@
 [package]
-name = "bitpacker"
+name = "bitcram"
 description = "A small, derive-based bit packing library for compact integer representations"
 readme = "README.md"
 keywords = ["bit-packing", "encoding", "derive", "compact", "bitfield"]
@@ -12,4 +12,4 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-bitpacker_derive = { path = "../bitpacker_derive", version = "=0.1.0" }
+bitcram_derive = { path = "../bitcram_derive", version = "=0.1.0" }

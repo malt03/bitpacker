@@ -20,7 +20,7 @@ use crate::Buffer;
 /// "3 bits for x + 3 bits for y" layout would use:
 ///
 /// ```
-/// use bitpacker::Packable;
+/// use bitcram::Packable;
 ///
 /// struct Coord { x: u8, y: u8 }
 ///

@@ -1,6 +1,6 @@
 mod types;
 
-use bitpacker::{Buffer, Packable};
+use bitcram::{Buffer, Packable};
 use types::*;
 
 fn assert_round_trip<P, B>(value: P)

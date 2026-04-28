@@ -1,4 +1,4 @@
-# bitpacker
+# bitcram
 
 A small, derive-based bit packing library for Rust. Pack structured data into compact integer buffers with sub-byte field granularity.
 
@@ -16,7 +16,7 @@ A small, derive-based bit packing library for Rust. Pack structured data into co
 Encode a mini-chess move (5×6 board, 6 piece types, with promotion) into 16 bits:
 
 ```rust
-use bitpacker::{Packable, packable};
+use bitcram::{Packable, packable};
 
 /// A coordinate on a 5×6 board.
 ///
@@ -114,7 +114,7 @@ Compared against similar crates packing 4 fields (4-bit + 4-bit + 8-bit + 16-bit
 
 | Crate | Pack | Unpack | Round-trip | Output size |
 |---|---:|---:|---:|---:|
-| **bitpacker** | 934 ps | 1.61 ns | 2.00 ns | 4 bytes |
+| **bitcram** | 934 ps | 1.61 ns | 2.00 ns | 4 bytes |
 | modular-bitfield | 967 ps | 1.54 ns | 1.99 ns | 4 bytes |
 | bitfield-struct | 970 ps | 1.55 ns | 2.00 ns | 4 bytes |
 | bincode 2.x | 3.82 ns | 4.33 ns | 8.09 ns | ~6 bytes |
@@ -125,14 +125,14 @@ The three bit-packers are essentially equivalent. Byte-level serializers are ~4�
 Numbers were measured on a single machine and will vary by hardware; reproduce locally with:
 
 ```sh
-cargo bench -p bitpacker_bench
+cargo bench -p bitcram_bench
 ```
 
 ## Workspace structure
 
-- `bitpacker/` — runtime crate (`Packable`, `Buffer`, `Packer`, `Unpacker`)
-- `bitpacker_derive/` — proc-macro crate (`#[packable]`)
-- `bitpacker_bench/` — comparison benchmarks (not published)
+- `bitcram/` — runtime crate (`Packable`, `Buffer`, `Packer`, `Unpacker`)
+- `bitcram_derive/` — proc-macro crate (`#[packable]`)
+- `bitcram_bench/` — comparison benchmarks (not published)
 
 ## Requirements
 

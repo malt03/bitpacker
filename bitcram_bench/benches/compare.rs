@@ -1,6 +1,6 @@
 use bincode::{Decode, Encode};
 use bitfield_struct::bitfield;
-use bitpacker::{Packable, packable};
+use bitcram::{Packable, packable};
 use criterion::{Criterion, criterion_group, criterion_main};
 use modular_bitfield::specifiers::{B4, B8, B16};
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ const B: u8 = 10;
 const C: u8 = 200;
 const D: u16 = 40000;
 
-// === bitpacker ===
+// === bitcram ===
 
 #[derive(Clone, Copy)]
 struct U4(u8);
@@ -92,7 +92,7 @@ struct ByteStruct {
 fn bench_pack(c: &mut Criterion) {
     let mut group = c.benchmark_group("pack");
 
-    group.bench_function("bitpacker", |b| {
+    group.bench_function("bitcram", |b| {
         b.iter(|| {
             let s = BpStruct {
                 a: U4(black_box(A)),
@@ -202,7 +202,7 @@ fn bench_unpack(c: &mut Criterion) {
     })
     .unwrap();
 
-    group.bench_function("bitpacker", |b| {
+    group.bench_function("bitcram", |b| {
         b.iter(|| {
             let s = BpStruct::unpack(black_box(bp_packed));
             black_box((s.a.0, s.b.0, s.c.0, s.d.0))
@@ -245,7 +245,7 @@ fn bench_unpack(c: &mut Criterion) {
 fn bench_round_trip(c: &mut Criterion) {
     let mut group = c.benchmark_group("round_trip");
 
-    group.bench_function("bitpacker", |b| {
+    group.bench_function("bitcram", |b| {
         b.iter(|| {
             let s = BpStruct {
                 a: U4(black_box(A)),
