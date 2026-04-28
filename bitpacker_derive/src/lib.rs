@@ -1,4 +1,3 @@
-use proc_macro;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
