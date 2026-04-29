@@ -96,3 +96,30 @@ pub struct FullU128 {
     pub hi: U64v,
     pub lo: U64v,
 }
+
+#[packable(u32)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct BitsStruct {
+    #[bits(5)]
+    pub x: u8,
+    #[bits(5)]
+    pub y: u8,
+    #[bits(3)]
+    pub z: u8,
+}
+
+#[packable(u16)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct BitsTuple(#[bits(4)] pub u8, #[bits(4)] pub u8);
+
+#[packable(u32)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum BitsEnum {
+    Empty,
+    Value(#[bits(8)] u8),
+    Pair {
+        #[bits(4)]
+        a: u8,
+        b: bool,
+    },
+}

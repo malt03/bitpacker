@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
-    Data, DataEnum, DataStruct, DeriveInput, Fields, FieldsNamed, FieldsUnnamed, Type,
-    parse_macro_input, parse_quote,
+    Attribute, Data, DataEnum, DataStruct, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed,
+    LitInt, Type, parse_quote,
 };
 
 /// Derives `bitcram::Packable<B>` for a struct or enum.
@@ -14,7 +14,26 @@ use syn::{
 /// struct Foo { x: X, y: Y }
 /// ```
 ///
-/// All field types must implement `Packable<B>` for the same buffer type `B`.
+/// All field types must implement `Packable<B>` for the same buffer type `B`,
+/// unless the field is annotated with `#[bits(N)]`.
+///
+/// # `#[bits(N)]` attribute
+///
+/// Annotates a field with an explicit bit width, allowing types that do not
+/// implement `Packable<B>` (typically primitive integers) to be packed:
+///
+/// ```ignore
+/// #[packable(u16)]
+/// struct Foo {
+///     #[bits(5)] x: u8,
+///     #[bits(6)] y: u8,
+///     #[bits(5)] z: u8,
+/// }
+/// ```
+///
+/// The field type must be cast-compatible with the buffer type in both
+/// directions (`*field as B` and `B as FieldType`). All primitive unsigned
+/// integers (`u8`, `u16`, `u32`, `u64`, `u128`) qualify.
 ///
 /// # Layout
 ///
@@ -39,39 +58,48 @@ pub fn packable(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    let ident = &input.ident;
-    let buffer_type = parse_macro_input!(args as Type);
-
-    let mut generics = input.generics.clone();
-    let where_clause = generics.make_where_clause();
-    for type_param in input.generics.type_params() {
-        let ident = &type_param.ident;
-        where_clause
-            .predicates
-            .push(parse_quote! { #ident: ::bitcram::Packable<#buffer_type> });
+    match packable_impl(args, input) {
+        Ok(ts) => ts.into(),
+        Err(e) => e.to_compile_error().into(),
     }
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+}
 
-    let (pack, unpack, size) = match &input.data {
-        Data::Struct(data) => data_struct(data, &buffer_type),
-        Data::Enum(data) => match data_enum(data, &buffer_type) {
-            Some(info) => info,
-            None => {
-                return quote! { #input }.into();
-            }
-        },
+fn packable_impl(
+    args: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> syn::Result<TokenStream> {
+    let mut input: DeriveInput = syn::parse(input)?;
+    let buffer_type: Type = syn::parse(args)?;
+
+    let info = match &input.data {
+        Data::Struct(data) => Some(data_struct(data, &buffer_type)?),
+        Data::Enum(data) => data_enum(data, &buffer_type)?,
         Data::Union(_) => {
-            return syn::Error::new_spanned(
-                input,
+            return Err(syn::Error::new_spanned(
+                &input,
                 "Bitcram can only be derived for structs and enums",
-            )
-            .to_compile_error()
-            .into();
+            ));
         }
     };
 
-    quote! {
+    strip_bits_attrs(&mut input);
+
+    let Some((pack, unpack, size)) = info else {
+        return Ok(quote! { #input });
+    };
+
+    let ident = &input.ident;
+    let mut generics = input.generics.clone();
+    let where_clause = generics.make_where_clause();
+    for type_param in input.generics.type_params() {
+        let type_ident = &type_param.ident;
+        where_clause
+            .predicates
+            .push(parse_quote! { #type_ident: ::bitcram::Packable<#buffer_type> });
+    }
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    Ok(quote! {
         #input
         impl #impl_generics ::bitcram::Packable<#buffer_type> for #ident #ty_generics #where_clause {
             const SIZE: u32 = #size;
@@ -84,28 +112,31 @@ pub fn packable(
                 #unpack
             }
         }
-    }.into()
+    })
 }
 
-fn data_struct(data: &DataStruct, buffer_type: &Type) -> (TokenStream, TokenStream, TokenStream) {
+fn data_struct(
+    data: &DataStruct,
+    buffer_type: &Type,
+) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
     let FieldsInfo {
         pack,
         unpack,
         bracketed_idents,
         size,
     } = match &data.fields {
-        Fields::Named(fields) => fields_named(buffer_type, fields),
-        Fields::Unnamed(fields) => fields_unnamed(buffer_type, fields),
+        Fields::Named(fields) => fields_named(buffer_type, fields)?,
+        Fields::Unnamed(fields) => fields_unnamed(buffer_type, fields)?,
         Fields::Unit => {
-            return (
+            return Ok((
                 quote! { <#buffer_type as ::bitcram::Buffer>::ZERO },
                 quote! { Self },
                 quote! { 0 },
-            );
+            ));
         }
     };
 
-    (
+    Ok((
         quote! {
             let mut packer = ::bitcram::Packer::<#buffer_type>::new();
             let Self #bracketed_idents = self;
@@ -118,16 +149,16 @@ fn data_struct(data: &DataStruct, buffer_type: &Type) -> (TokenStream, TokenStre
             Self #bracketed_idents
         },
         size,
-    )
+    ))
 }
 
 fn data_enum(
     data: &DataEnum,
     buffer_type: &Type,
-) -> Option<(TokenStream, TokenStream, TokenStream)> {
+) -> syn::Result<Option<(TokenStream, TokenStream, TokenStream)>> {
     let variant_len = data.variants.len();
     let variant_size = match variant_len {
-        0 => return None,
+        0 => return Ok(None),
         1 => 0,
         _ => (variant_len - 1).ilog2() + 1,
     };
@@ -142,8 +173,8 @@ fn data_enum(
             bracketed_idents,
             size,
         } = match &variant.fields {
-            Fields::Named(fields) => fields_named(buffer_type, fields),
-            Fields::Unnamed(fields) => fields_unnamed(buffer_type, fields),
+            Fields::Named(fields) => fields_named(buffer_type, fields)?,
+            Fields::Unnamed(fields) => fields_unnamed(buffer_type, fields)?,
             Fields::Unit => FieldsInfo {
                 pack: quote! {},
                 unpack: quote! {},
@@ -196,7 +227,7 @@ fn data_enum(
         }
     };
 
-    Some((pack, unpack, size))
+    Ok(Some((pack, unpack, size)))
 }
 
 struct FieldsInfo {
@@ -206,7 +237,7 @@ struct FieldsInfo {
     size: TokenStream,
 }
 
-fn fields_named(buffer_type: &Type, fields: &FieldsNamed) -> FieldsInfo {
+fn fields_named(buffer_type: &Type, fields: &FieldsNamed) -> syn::Result<FieldsInfo> {
     let mut idents = Vec::new();
     let mut packs = Vec::new();
     let mut unpacks = Vec::new();
@@ -214,42 +245,110 @@ fn fields_named(buffer_type: &Type, fields: &FieldsNamed) -> FieldsInfo {
     for field in &fields.named {
         let ident = field.ident.as_ref().unwrap();
         idents.push(quote! { #ident });
-        packs.push(quote! { packer.pack(#ident); });
         let ty = &field.ty;
-        unpacks.push(quote! { let #ident: #ty = unpacker.unpack(); });
-        sizes.push(quote! {
-            <#ty as ::bitcram::Packable<#buffer_type>>::SIZE
-        });
+        let bits = parse_bits_attr(&field.attrs)?;
+        let (pack, unpack, size) = field_codegen(quote! { #ident }, ty, bits, buffer_type);
+        packs.push(pack);
+        unpacks.push(unpack);
+        sizes.push(size);
     }
     let unpacks = unpacks.into_iter().rev();
-    FieldsInfo {
+    Ok(FieldsInfo {
         pack: quote! { #(#packs)* },
         unpack: quote! { #(#unpacks)* },
         bracketed_idents: quote! { { #(#idents),* } },
         size: quote! { 0#(+ #sizes)* },
-    }
+    })
 }
 
-fn fields_unnamed(buffer_type: &Type, fields: &FieldsUnnamed) -> FieldsInfo {
+fn fields_unnamed(buffer_type: &Type, fields: &FieldsUnnamed) -> syn::Result<FieldsInfo> {
     let mut idents = Vec::new();
     let mut packs = Vec::new();
     let mut unpacks = Vec::new();
     let mut sizes = Vec::new();
     for (i, field) in fields.unnamed.iter().enumerate() {
-        let ident = format_ident!("__bit_packer_field{}", i);
+        let ident = format_ident!("__bitcram_field{}", i);
         idents.push(quote! { #ident });
-        packs.push(quote! { packer.pack(#ident); });
         let ty = &field.ty;
-        unpacks.push(quote! { let #ident: #ty = unpacker.unpack(); });
-        sizes.push(quote! {
-            <#ty as ::bitcram::Packable<#buffer_type>>::SIZE
-        });
+        let bits = parse_bits_attr(&field.attrs)?;
+        let (pack, unpack, size) = field_codegen(quote! { #ident }, ty, bits, buffer_type);
+        packs.push(pack);
+        unpacks.push(unpack);
+        sizes.push(size);
     }
     let unpacks = unpacks.into_iter().rev();
-    FieldsInfo {
+    Ok(FieldsInfo {
         pack: quote! { #(#packs)* },
         unpack: quote! { #(#unpacks)* },
         bracketed_idents: quote! { (#(#idents),*) },
         size: quote! { 0#(+ #sizes)* },
+    })
+}
+
+fn field_codegen(
+    ident: TokenStream,
+    ty: &Type,
+    bits: Option<u32>,
+    buffer_type: &Type,
+) -> (TokenStream, TokenStream, TokenStream) {
+    if let Some(n) = bits {
+        (
+            quote! { packer.raw_pack(*#ident as #buffer_type, #n); },
+            quote! { let #ident: #ty = unpacker.raw_unpack(#n) as #ty; },
+            quote! { #n },
+        )
+    } else {
+        (
+            quote! { packer.pack(#ident); },
+            quote! { let #ident: #ty = unpacker.unpack(); },
+            quote! { <#ty as ::bitcram::Packable<#buffer_type>>::SIZE },
+        )
+    }
+}
+
+fn parse_bits_attr(attrs: &[Attribute]) -> syn::Result<Option<u32>> {
+    let mut result = None;
+    for attr in attrs {
+        if attr.path().is_ident("bits") {
+            if result.is_some() {
+                return Err(syn::Error::new_spanned(
+                    attr,
+                    "duplicate `#[bits]` attribute",
+                ));
+            }
+            let lit: LitInt = attr.parse_args()?;
+            let n: u32 = lit.base10_parse()?;
+            if n == 0 {
+                return Err(syn::Error::new_spanned(
+                    attr,
+                    "`#[bits]` value must be greater than 0",
+                ));
+            }
+            result = Some(n);
+        }
+    }
+    Ok(result)
+}
+
+fn strip_bits_attrs(input: &mut DeriveInput) {
+    match &mut input.data {
+        Data::Struct(s) => strip_fields(&mut s.fields),
+        Data::Enum(e) => {
+            for variant in &mut e.variants {
+                strip_fields(&mut variant.fields);
+            }
+        }
+        Data::Union(_) => {}
+    }
+}
+
+fn strip_fields(fields: &mut Fields) {
+    let iter: Box<dyn Iterator<Item = &mut Field>> = match fields {
+        Fields::Named(named) => Box::new(named.named.iter_mut()),
+        Fields::Unnamed(unnamed) => Box::new(unnamed.unnamed.iter_mut()),
+        Fields::Unit => return,
+    };
+    for field in iter {
+        field.attrs.retain(|a| !a.path().is_ident("bits"));
     }
 }

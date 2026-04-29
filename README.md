@@ -100,7 +100,26 @@ Built-in `Packable` implementations are provided for:
 | `(T1, T2, ..., Tn)` (up to 12-tuples) | `T1::SIZE + T2::SIZE + ... + Tn::SIZE` |
 | `[T; N]` | `N * T::SIZE` |
 
-For primitive types or custom encodings (like `Coord` above), implement `Packable<B>` manually.
+For primitive types or custom encodings (like `Coord` above), implement `Packable<B>` manually — or annotate fields with `#[bits(N)]` to specify the bit width directly:
+
+```rust
+use bitcram::{Packable, packable};
+
+#[packable(u16)]
+#[derive(Debug, PartialEq, Eq)]
+struct Foo {
+    #[bits(5)] x: u8,
+    #[bits(6)] y: u8,
+    #[bits(5)] z: u8,
+}
+
+let foo = Foo { x: 31, y: 63, z: 31 };
+assert_eq!(Foo::unpack(foo.pack()), foo);
+```
+
+Without `#[bits]`, the field type must implement `Packable<B>` — there is no automatic width inference from primitive types. This makes the requirement explicit at the cost of a small annotation. The field type must be cast-compatible with the buffer type in both directions; all primitive unsigned integers (`u8`, `u16`, `u32`, `u64`, `u128`) qualify.
+
+The field type must be cast-compatible with the buffer type in both directions (`*field as B` and `B as FieldType`). All primitive unsigned integers (`u8`, `u16`, `u32`, `u64`, `u128`) qualify.
 
 ## Conventions
 

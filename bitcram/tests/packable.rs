@@ -122,3 +122,38 @@ fn array() {
     assert_eq!(<[U3; 4] as Packable<u128>>::SIZE, 12);
     assert_round_trip([U3(1), U3(2), U3(3), U3(4)]);
 }
+
+#[test]
+fn bits_struct() {
+    assert_eq!(BitsStruct::SIZE, 13);
+    assert_round_trip(BitsStruct { x: 0, y: 0, z: 0 });
+    assert_round_trip(BitsStruct {
+        x: 31,
+        y: 31,
+        z: 7,
+    });
+    assert_round_trip(BitsStruct {
+        x: 5,
+        y: 12,
+        z: 3,
+    });
+}
+
+#[test]
+fn bits_tuple() {
+    assert_eq!(BitsTuple::SIZE, 8);
+    assert_round_trip(BitsTuple(0, 0));
+    assert_round_trip(BitsTuple(0xF, 0xF));
+    assert_round_trip(BitsTuple(0xA, 0x5));
+}
+
+#[test]
+fn bits_enum() {
+    // 3 variants → 2-bit index; max payload is Pair(4 + 1) = 5 bits, but
+    // Value(8) > Pair(5), so max payload is 8. Total: 2 + 8 = 10.
+    assert_eq!(BitsEnum::SIZE, 10);
+    assert_round_trip(BitsEnum::Empty);
+    assert_round_trip(BitsEnum::Value(200));
+    assert_round_trip(BitsEnum::Pair { a: 0xF, b: true });
+    assert_round_trip(BitsEnum::Pair { a: 0x0, b: false });
+}
