@@ -91,6 +91,13 @@ Each move serializes to 2 bytes. A naive byte-aligned encoding of the same data 
   - Named variants (`Bar { x: X, y: Y }`)
 - **Generic types** — `Packable<B>` bounds are auto-applied to type parameters
 
+Multiple buffer types can be specified to generate one impl per type:
+
+```ignore
+#[packable(u16, u32, u64)]
+struct Foo { #[bits(5)] x: u8, #[bits(5)] y: u8 }
+```
+
 Built-in `Packable` implementations are provided for:
 
 | Type | `SIZE` |

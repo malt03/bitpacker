@@ -127,16 +127,8 @@ fn array() {
 fn bits_struct() {
     assert_eq!(BitsStruct::SIZE, 13);
     assert_round_trip(BitsStruct { x: 0, y: 0, z: 0 });
-    assert_round_trip(BitsStruct {
-        x: 31,
-        y: 31,
-        z: 7,
-    });
-    assert_round_trip(BitsStruct {
-        x: 5,
-        y: 12,
-        z: 3,
-    });
+    assert_round_trip(BitsStruct { x: 31, y: 31, z: 7 });
+    assert_round_trip(BitsStruct { x: 5, y: 12, z: 3 });
 }
 
 #[test]
@@ -156,4 +148,16 @@ fn bits_enum() {
     assert_round_trip(BitsEnum::Value(200));
     assert_round_trip(BitsEnum::Pair { a: 0xF, b: true });
     assert_round_trip(BitsEnum::Pair { a: 0x0, b: false });
+}
+
+#[test]
+fn multi_buffer() {
+    assert_eq!(<MultiBuffer as Packable<u16>>::SIZE, 10);
+    assert_eq!(<MultiBuffer as Packable<u32>>::SIZE, 10);
+    assert_eq!(<MultiBuffer as Packable<u64>>::SIZE, 10);
+
+    let v = MultiBuffer { x: 5, y: 12 };
+    assert_round_trip::<_, u16>(v.clone());
+    assert_round_trip::<_, u32>(v.clone());
+    assert_round_trip::<_, u64>(v);
 }

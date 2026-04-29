@@ -123,3 +123,12 @@ pub enum BitsEnum {
         b: bool,
     },
 }
+
+#[packable(u16, u32, u64)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MultiBuffer {
+    #[bits(5)]
+    pub x: u8,
+    #[bits(5)]
+    pub y: u8,
+}

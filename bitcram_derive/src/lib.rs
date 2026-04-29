@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
     Attribute, Data, DataEnum, DataStruct, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed,
-    LitInt, Type, parse_quote,
+    LitInt, Token, Type, parse::Parser, parse_quote, punctuated::Punctuated,
 };
 
 /// Derives `bitcram::Packable<B>` for a struct or enum.
@@ -14,8 +14,16 @@ use syn::{
 /// struct Foo { x: X, y: Y }
 /// ```
 ///
-/// All field types must implement `Packable<B>` for the same buffer type `B`,
-/// unless the field is annotated with `#[bits(N)]`.
+/// Multiple buffer types can be specified to generate one `Packable<B>` impl
+/// per type:
+///
+/// ```ignore
+/// #[packable(u16, u32, u64)]
+/// struct Foo { #[bits(5)] x: u8, #[bits(5)] y: u8 }
+/// ```
+///
+/// All field types must implement `Packable<B>` for each declared buffer type
+/// `B`, unless the field is annotated with `#[bits(N)]`.
 ///
 /// # `#[bits(N)]` attribute
 ///
@@ -69,23 +77,44 @@ fn packable_impl(
     input: proc_macro::TokenStream,
 ) -> syn::Result<TokenStream> {
     let mut input: DeriveInput = syn::parse(input)?;
-    let buffer_type: Type = syn::parse(args)?;
+    let buffer_types = Punctuated::<Type, Token![,]>::parse_terminated.parse(args)?;
 
+    if buffer_types.is_empty() {
+        return Err(syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "`packable` requires at least one buffer type",
+        ));
+    }
+
+    let mut impls = Vec::new();
+    for buffer_type in &buffer_types {
+        if let Some(ts) = impl_for_buffer(&input, buffer_type)? {
+            impls.push(ts);
+        }
+    }
+
+    strip_bits_attrs(&mut input);
+
+    Ok(quote! {
+        #input
+        #(#impls)*
+    })
+}
+
+fn impl_for_buffer(input: &DeriveInput, buffer_type: &Type) -> syn::Result<Option<TokenStream>> {
     let info = match &input.data {
-        Data::Struct(data) => Some(data_struct(data, &buffer_type)?),
-        Data::Enum(data) => data_enum(data, &buffer_type)?,
+        Data::Struct(data) => Some(data_struct(data, buffer_type)?),
+        Data::Enum(data) => data_enum(data, buffer_type)?,
         Data::Union(_) => {
             return Err(syn::Error::new_spanned(
-                &input,
+                input,
                 "Bitcram can only be derived for structs and enums",
             ));
         }
     };
 
-    strip_bits_attrs(&mut input);
-
     let Some((pack, unpack, size)) = info else {
-        return Ok(quote! { #input });
+        return Ok(None);
     };
 
     let ident = &input.ident;
@@ -99,8 +128,7 @@ fn packable_impl(
     }
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    Ok(quote! {
-        #input
+    Ok(Some(quote! {
         impl #impl_generics ::bitcram::Packable<#buffer_type> for #ident #ty_generics #where_clause {
             const SIZE: u32 = #size;
             #[inline]
@@ -112,7 +140,7 @@ fn packable_impl(
                 #unpack
             }
         }
-    })
+    }))
 }
 
 fn data_struct(
